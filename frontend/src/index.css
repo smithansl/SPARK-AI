@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222 47% 4%;
+  --foreground: 210 40% 98%;
+  --card: 222 40% 8%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 44% 6%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 187 100% 50%;
+  --primary-foreground: 222 47% 6%;
+  --secondary: 217 33% 14%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 33% 14%;
+  --muted-foreground: 215 20% 60%;
+  --accent: 187 92% 42%;
+  --accent-foreground: 222 47% 6%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --ring: 187 100% 50%;
+  --radius: 0.25rem;
+}
+
+* { border-color: hsl(var(--border)); }
+
+body {
+  margin: 0;
+  background-color: #020617;
+  color: #f8fafc;
+  font-family: 'Inter', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display { font-family: 'Cabinet Grotesk', 'Space Grotesk', sans-serif; }
+.font-mono-data { font-family: 'JetBrains Mono', monospace; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #020617; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+::selection { background: #00E5FF; color: #020617; }
+
+.glass {
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(16px);
+  border: 1px solid #1e293b;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(30,41,59,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,41,59,0.5) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.glow-teal { box-shadow: 0 0 0 1px rgba(0,229,255,0.35), 0 0 24px rgba(0,229,255,0.15); }
+.text-glow { text-shadow: 0 0 24px rgba(0,229,255,0.55); }
+
+/* Leaflet dark theme */
+.leaflet-container { background: #020617 !important; font-family: 'JetBrains Mono', monospace; }
+.leaflet-tile { filter: brightness(0.65) invert(1) contrast(1.05) hue-rotate(190deg) saturate(0.35) brightness(0.85); }
+.leaflet-control-attribution { background: rgba(2,6,23,0.6) !important; color: #475569 !important; }
+.leaflet-control-attribution a { color: #64748b !important; }
+.leaflet-bar a { background: #0f172a !important; color: #00E5FF !important; border-color: #1e293b !important; }
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.85); opacity: 0.9; }
+  70% { transform: scale(1.6); opacity: 0; }
+  100% { opacity: 0; }
+}
+.pulse-dot::after {
+  content: ''; position: absolute; inset: 0; border-radius: 9999px;
+  animation: pulse-ring 2.2s cubic-bezier(0.4,0,0.6,1) infinite;
+}
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.fade-up { animation: fadeUp 0.5s ease forwards; }
+
+@keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(2000%); } }

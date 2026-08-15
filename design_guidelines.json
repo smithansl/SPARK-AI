@@ -1,0 +1,98 @@
+{
+  "theme": {
+    "mode": "dark",
+    "description": "ArcGIS x Bloomberg Terminal aesthetic. Deep navy/charcoal background, vibrant teal/cyan spatial overlays, and high-contrast white metric cards."
+  },
+  "typography": {
+    "heading_font": "Cabinet Grotesk, sans-serif",
+    "body_font": "Inter, sans-serif",
+    "data_font": "JetBrains Mono, monospace",
+    "hierarchy": {
+      "hero_title": "text-6xl tracking-tighter font-black text-white",
+      "panel_header": "text-lg font-bold tracking-tight text-white uppercase",
+      "metric_value": "text-3xl font-mono font-bold text-teal-400",
+      "body": "text-sm text-slate-300",
+      "tiny_label": "text-[10px] uppercase tracking-widest text-slate-500 font-mono"
+    }
+  },
+  "colors": {
+    "background": {
+      "app": "#020617",
+      "panel_dark": "rgba(15, 23, 42, 0.85)",
+      "panel_white": "#ffffff"
+    },
+    "border": {
+      "subtle": "#1e293b",
+      "focus": "#06b6d4"
+    },
+    "text": {
+      "primary": "#f8fafc",
+      "secondary": "#94a3b8",
+      "on_white": "#020617"
+    },
+    "brand": {
+      "teal": "#00E5FF",
+      "cyan": "#06b6d4",
+      "sustainability_green": "#10b981",
+      "alert_orange": "#f97316",
+      "alert_red": "#ef4444"
+    }
+  },
+  "visual_enhancers": {
+    "borders": "1px solid borders everywhere (border-slate-800). No soft shadows, use sharp tactical edges.",
+    "glassmorphism": "backdrop-blur-xl on dark panels overlaid on the map. NEVER use pure transparent backgrounds under text.",
+    "shapes": "Rectangular, dense. max rounded-sm."
+  },
+  "components": {
+    "white_cards": "Use 'bg-white text-slate-950' for key KPI stat cards (Waste tons, Growth %) to make them pop violently against the dark map, satisfying the 'White cards' prompt.",
+    "buttons": "Square edges, border-slate-700 bg-slate-900 text-teal-400 hover:bg-teal-400 hover:text-slate-900 transition-colors duration-200.",
+    "inputs": "Terminal style, bottom border only, flush background, monospaced text.",
+    "ai_chat": "Chat bubbles should be stark: user is white card, AI is dark navy glass with cyan border."
+  },
+  "grids_layouts": {
+    "landing": "Full viewport map. Absolute centered hero text 'What should our cities prepare for next?'. One CTA.",
+    "intelligence_dashboard": "Absolute edge-to-edge map. Floating 300px sidebar on left (Layers/Insights), floating metrics bar on bottom, floating controls on top right.",
+    "site_suitability": "Bento grid of progress bars and constraint lists.",
+    "spacing": "Dense internal padding (p-3, p-4) to fit data. Large gaps between floating panels."
+  },
+  "motion": {
+    "map": "Smooth fly-to on coordinate selection.",
+    "data": "Count-up animations for metrics.",
+    "panels": "Slide in from edges with slight stagger."
+  },
+  "accessibility": {
+    "contrast": "Teal on dark navy is AA compliant. Ensure white cards have dark slate text.",
+    "focus": "Use focus:ring-1 focus:ring-teal-400 focus:outline-none.",
+    "testing": "MANDATORY: add data-testid to every actionable element."
+  },
+  "media": "Use provided Unsplash URLs for fallback imagery, but rely heavily on live GL map rendering.",
+  "3d_libraries": {
+    "map": "react-map-gl (for the base map)",
+    "data_layers": "deck.gl (for high-performance WebGL overlays, HexagonLayer for hotspots, GeoJsonLayer for routes)",
+    "charts": "recharts (for Forecasting and Analytics)"
+  },
+  "image_urls": {
+    "landing_hero_map": {
+      "url": "https://images.unsplash.com/photo-1580360119963-48b239357899?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwxfHxzYXRlbGxpdGUlMjBtYXAlMjBuaWdodCUyMGNpdHl8ZW58MHx8fHwxNzg2ODA0NjM0fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Satellite map night city - use as fallback bg for landing page."
+    },
+    "simulator_neon": {
+      "url": "https://images.unsplash.com/photo-1760553120312-2821bf54e767?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwzfHxzbWFydCUyMGNpdHklMjBuZW9uJTIwZGF0YXxlbnwwfHx8fDE3ODY4MDQ2MzR8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Smart city neon data - use for AI Future Lab empty state."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Install required dependencies: yarn add react-map-gl deck.gl mapbox-gl recharts lucide-react framer-motion",
+    "Configure tailwind.config.js with the provided dark navy and teal palette.",
+    "Implement the Dashboard structure: The map MUST be the root background, with UI elements floating above it.",
+    "Design explicit routes/views: Landing (Simple Hero), Citizen Form, and Planner Dashboard (Intelligence + Simulator)."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Do not use generic UI centered layouts. This is a dense, edge-to-edge spatial intelligence terminal.",
+    "You MUST NOT use complete transparent backgrounds for UI components floating over the map. Always use backdrop-blur-md with semi-transparent backgrounds.",
+    "All interactive elements MUST have a data-testid attribute.",
+    "Avoid pill-shaped round buttons. Use 0-4px border radius for a tactical, technical aesthetic.",
+    "Do not use generic emoji for icons, use Lucide React icons.",
+    "Avoid 'transition: all', use specific transition properties."
+  ]
+}
