@@ -38,3 +38,14 @@ Story: Community data → GIS patterns → AI projection → planner scenarios �
 
 ## Next Tasks
 - Await user's real Sepang dataset to replace mock data.
+
+## Update — Citizen App Rebuild (Alam Flora style)
+Replaced the simple citizen page with a full 6-module recycling app:
+- Home Dashboard (recycling stats, points, e-wallet, CO₂, quick actions, campaign banners)
+- Buy-Back Locator (Leaflet map of BBC / DTRC / 3R on Wheels + hours + accepted items + directions)
+- Recycling Value Calculator (live buy-back rate estimator → RM + points, "Add to Wallet")
+- Cashless Wallet & Rewards (balance/points, transaction history, QR check-in, convert to cash/reward)
+- Collection Schedule & Reminders (municipal calendar + notification toggles)
+- Public Reporting/Complaints (category, description, geolocation tag, camera photo upload)
+Backend added: /api/recycling/{rates,centers,schedule}, /api/announcements, /api/wallet(+dropoff,+convert),
+/api/upload + /api/files (Emergent object storage), /api/complaints. Tested 18/18 backend + 6/6 UI.

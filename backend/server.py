@@ -7,14 +7,16 @@ load_dotenv(ROOT_DIR / '.env')
 
 import logging
 import secrets
+import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 
 import bcrypt
 import jwt
+import requests
 from bson import ObjectId
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends, UploadFile, File, Header, Query
+from fastapi.responses import StreamingResponse, Response
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
@@ -31,6 +33,41 @@ db = client[os.environ['DB_NAME']]
 JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALGORITHM = "HS256"
 EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
+
+# ---------- Object storage ----------
+STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+APP_NAME = "spark"
+storage_key = None
+
+
+def init_storage(force: bool = False):
+    global storage_key
+    if storage_key and not force:
+        return storage_key
+    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_LLM_KEY}, timeout=30)
+    resp.raise_for_status()
+    storage_key = resp.json()["storage_key"]
+    return storage_key
+
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    key = init_storage()
+    resp = requests.put(f"{STORAGE_URL}/objects/{path}",
+                        headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
+    if resp.status_code == 404:
+        key = init_storage(force=True)
+        resp = requests.put(f"{STORAGE_URL}/objects/{path}",
+                            headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_object(path: str):
+    key = init_storage()
+    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 app = FastAPI(title="SPARK API")
 api_router = APIRouter(prefix="/api")
@@ -108,6 +145,31 @@ class SimInput(BaseModel):
     recycling_rate: float = 20
     new_housing: int = 500
     new_commercial: bool = False
+
+
+class DropoffItem(BaseModel):
+    id: str
+    item: str
+    weight: float
+
+
+class DropoffInput(BaseModel):
+    items: List[DropoffItem]
+    center_id: Optional[str] = None
+
+
+class ConvertInput(BaseModel):
+    points: int
+    mode: str = "cash"  # cash | reward
+
+
+class ComplaintInput(BaseModel):
+    category: str
+    description: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    address: Optional[str] = None
+    photo_path: Optional[str] = None
 
 
 # ---------- Auth routes ----------
@@ -298,6 +360,156 @@ async def root():
     return {"message": "SPARK API online"}
 
 
+# ---------- Citizen: recycling reference data ----------
+@api_router.get("/recycling/rates")
+async def recycling_rates():
+    return sd.RECYCLING_RATES
+
+
+@api_router.get("/recycling/centers")
+async def recycling_centers():
+    return sd.BUY_BACK_CENTERS
+
+
+@api_router.get("/recycling/schedule")
+async def recycling_schedule():
+    return sd.COLLECTION_SCHEDULE
+
+
+@api_router.get("/announcements")
+async def announcements():
+    return sd.ANNOUNCEMENTS
+
+
+# ---------- Citizen: wallet ----------
+async def _get_or_create_wallet(user: dict):
+    w = await db.wallets.find_one({"user_id": user["id"]})
+    if w is None:
+        now = datetime.now(timezone.utc).isoformat()
+        w = {"user_id": user["id"], "balance": 24.60, "points": 1240, "total_kg": 86.5,
+             "dropoffs": 7, "created_at": now}
+        await db.wallets.insert_one(w)
+        seed_txns = [
+            {"user_id": user["id"], "type": "dropoff", "description": "PET Plastic · 3.2kg · BBC Salak Tinggi", "amount": 2.24, "points": 224, "kg": 3.2, "created_at": now},
+            {"user_id": user["id"], "type": "dropoff", "description": "Aluminium Cans · 1.1kg · DTRC Kota Warisan", "amount": 4.95, "points": 495, "kg": 1.1, "created_at": now},
+            {"user_id": user["id"], "type": "reward", "description": "Redeemed · Touch n Go RM10", "amount": -10.00, "points": -1000, "kg": 0, "created_at": now},
+            {"user_id": user["id"], "type": "dropoff", "description": "Cardboard · 5.0kg · 3R on Wheels", "amount": 1.75, "points": 175, "kg": 5.0, "created_at": now},
+        ]
+        await db.wallet_txns.insert_many(seed_txns)
+    w.pop("_id", None)
+    return w
+
+
+@api_router.get("/wallet")
+async def get_wallet(user: dict = Depends(get_current_user)):
+    w = await _get_or_create_wallet(user)
+    txns = await db.wallet_txns.find({"user_id": user["id"]}).sort("created_at", -1).to_list(100)
+    for t in txns:
+        t.pop("_id", None)
+    return {"wallet": w, "transactions": txns}
+
+
+@api_router.post("/wallet/dropoff")
+async def wallet_dropoff(body: DropoffInput, user: dict = Depends(get_current_user)):
+    await _get_or_create_wallet(user)
+    rates = {r["id"]: r for r in sd.RECYCLING_RATES}
+    total_rm, total_pts, total_kg, lines = 0.0, 0, 0.0, []
+    for it in body.items:
+        r = rates.get(it.id)
+        if not r or it.weight <= 0:
+            continue
+        total_rm += r["rate"] * it.weight
+        total_pts += int(r["points"] * it.weight)
+        total_kg += it.weight
+        lines.append(f"{r['item']} {it.weight}kg")
+    total_rm = round(total_rm, 2)
+    if not lines:
+        raise HTTPException(status_code=400, detail="No valid items")
+    center = next((c for c in sd.BUY_BACK_CENTERS if c["id"] == body.center_id), None)
+    desc = " · ".join(lines) + (f" · {center['name']}" if center else "")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.wallet_txns.insert_one({"user_id": user["id"], "type": "dropoff", "description": desc,
+                                     "amount": total_rm, "points": total_pts, "kg": round(total_kg, 2), "created_at": now})
+    await db.wallets.update_one({"user_id": user["id"]},
+                                {"$inc": {"balance": total_rm, "points": total_pts, "total_kg": total_kg, "dropoffs": 1}})
+    w = await _get_or_create_wallet(user)
+    return {"credited_rm": total_rm, "credited_points": total_pts, "wallet": w}
+
+
+@api_router.post("/wallet/convert")
+async def wallet_convert(body: ConvertInput, user: dict = Depends(get_current_user)):
+    w = await _get_or_create_wallet(user)
+    if body.points <= 0 or body.points > w["points"]:
+        raise HTTPException(status_code=400, detail="Insufficient points")
+    rm = round(body.points / 100.0, 2)  # 100 pts = RM1
+    now = datetime.now(timezone.utc).isoformat()
+    label = "Cash payout to bank" if body.mode == "cash" else "Redeemed reward voucher"
+    await db.wallet_txns.insert_one({"user_id": user["id"], "type": "reward",
+                                     "description": f"{label} · {body.points} pts", "amount": rm if body.mode == "cash" else 0,
+                                     "points": -body.points, "kg": 0, "created_at": now})
+    inc = {"points": -body.points}
+    if body.mode == "cash":
+        inc["balance"] = rm
+    await db.wallets.update_one({"user_id": user["id"]}, {"$inc": inc})
+    w = await _get_or_create_wallet(user)
+    return {"converted_rm": rm, "wallet": w}
+
+
+# ---------- Citizen: upload + complaints ----------
+@api_router.post("/upload")
+async def upload(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    ext = file.filename.split(".")[-1].lower() if "." in file.filename else "bin"
+    path = f"{APP_NAME}/uploads/{user['id']}/{uuid.uuid4()}.{ext}"
+    data = await file.read()
+    result = put_object(path, data, file.content_type or "application/octet-stream")
+    await db.files.insert_one({"storage_path": result["path"], "original_filename": file.filename,
+                               "content_type": file.content_type, "size": result.get("size"),
+                               "user_id": user["id"], "is_deleted": False,
+                               "created_at": datetime.now(timezone.utc).isoformat()})
+    return {"path": result["path"]}
+
+
+@api_router.get("/files/{path:path}")
+async def download_file(path: str, authorization: str = Header(None), auth: str = Query(None)):
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+    elif auth:
+        token = auth
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    record = await db.files.find_one({"storage_path": path, "is_deleted": False})
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+    data, content_type = get_object(path)
+    return Response(content=data, media_type=record.get("content_type") or content_type)
+
+
+@api_router.post("/complaints")
+async def create_complaint(body: ComplaintInput, user: dict = Depends(get_current_user)):
+    doc = {"category": body.category, "description": body.description, "lat": body.lat, "lng": body.lng,
+           "address": body.address, "photo_path": body.photo_path, "status": "submitted",
+           "reporter": user["name"], "reporter_id": user["id"],
+           "created_at": datetime.now(timezone.utc).isoformat()}
+    res = await db.complaints.insert_one(doc)
+    doc["id"] = str(res.inserted_id)
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.get("/complaints")
+async def list_complaints(user: dict = Depends(get_current_user)):
+    query = {} if user["role"] == "planner" else {"reporter_id": user["id"]}
+    docs = await db.complaints.find(query).sort("created_at", -1).to_list(200)
+    for d in docs:
+        d["id"] = str(d.pop("_id"))
+    return docs
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -311,6 +523,11 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
+    try:
+        init_storage()
+        logger.info("Object storage initialized")
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
     await db.users.create_index("email", unique=True)
     admin_email = os.environ.get("ADMIN_EMAIL", "planner@spark.gov.my").lower()
     admin_password = os.environ.get("ADMIN_PASSWORD", "Sepang2030")

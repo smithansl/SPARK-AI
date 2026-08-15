@@ -258,3 +258,67 @@ def simulate(population_growth, recycling_rate, new_housing, new_commercial):
         "net_landfill_tonnes": net_landfill,
         "affected_zone": "Zone B — Dengkil / Cyberjaya Fringe" if population_growth >= 15 else "Zone A — Labu Lanjut East",
     }
+
+
+# --- Alam Flora style citizen recycling data ---
+
+RECYCLING_RATES = [
+    {"id": "mixed-paper", "item": "Mixed Paper", "category": "Paper", "rate": 0.30, "points": 30, "unit": "kg"},
+    {"id": "newspaper", "item": "Old Newspaper", "category": "Paper", "rate": 0.50, "points": 50, "unit": "kg"},
+    {"id": "cardboard", "item": "Cardboard / Carton", "category": "Paper", "rate": 0.35, "points": 35, "unit": "kg"},
+    {"id": "pet", "item": "PET Plastic Bottles", "category": "Plastic", "rate": 0.70, "points": 70, "unit": "kg"},
+    {"id": "hdpe", "item": "HDPE Plastic", "category": "Plastic", "rate": 0.50, "points": 50, "unit": "kg"},
+    {"id": "aluminium", "item": "Aluminium Cans", "category": "Metal", "rate": 4.50, "points": 450, "unit": "kg"},
+    {"id": "scrap-metal", "item": "Scrap Iron / Metal", "category": "Metal", "rate": 0.60, "points": 60, "unit": "kg"},
+    {"id": "glass", "item": "Glass Bottles", "category": "Glass", "rate": 0.10, "points": 10, "unit": "kg"},
+    {"id": "ewaste", "item": "E-Waste", "category": "E-Waste", "rate": 1.20, "points": 120, "unit": "kg"},
+    {"id": "cooking-oil", "item": "Used Cooking Oil", "category": "Organic", "rate": 1.50, "points": 150, "unit": "kg"},
+    {"id": "fabric", "item": "Old Clothes / Fabric", "category": "Fabric", "rate": 0.20, "points": 20, "unit": "kg"},
+]
+
+BUY_BACK_CENTERS = [
+    {
+        "id": "bbc-salak", "name": "Alam Flora BBC Salak Tinggi", "type": "Buy-Back Centre",
+        "lat": 2.8095, "lng": 101.7385, "hours": "Mon–Sat · 9am–5pm", "phone": "03-8706 1122",
+        "accepted": ["Paper", "Plastic", "Metal", "E-Waste", "Glass"],
+    },
+    {
+        "id": "bbc-klia", "name": "Alam Flora BBC KLIA", "type": "Buy-Back Centre",
+        "lat": 2.7460, "lng": 101.7120, "hours": "Daily · 8am–6pm", "phone": "03-8787 3344",
+        "accepted": ["Paper", "Plastic", "Metal", "Fabric"],
+    },
+    {
+        "id": "dtrc-kota-warisan", "name": "Drive-Through Recycling · Kota Warisan", "type": "Drive-Through (DTRC)",
+        "lat": 2.8310, "lng": 101.7010, "hours": "Daily · 7am–7pm", "phone": "03-8912 5566",
+        "accepted": ["Paper", "Plastic", "Metal", "Glass", "E-Waste", "Organic"],
+    },
+    {
+        "id": "3r-dengkil", "name": "3R on Wheels · Dengkil Stop", "type": "3R on Wheels",
+        "lat": 2.8520, "lng": 101.6810, "hours": "Sun only · 8am–12pm", "phone": "1-800-88-7472",
+        "accepted": ["Paper", "Plastic", "Metal"],
+    },
+    {
+        "id": "3r-sepang-town", "name": "3R on Wheels · Sepang Town Stop", "type": "3R on Wheels",
+        "lat": 2.6905, "lng": 101.7510, "hours": "Sat only · 8am–12pm", "phone": "1-800-88-7472",
+        "accepted": ["Paper", "Plastic", "Metal", "Fabric"],
+    },
+    {
+        "id": "bbc-sungai-pelek", "name": "Alam Flora BBC Sungai Pelek", "type": "Buy-Back Centre",
+        "lat": 2.6510, "lng": 101.7615, "hours": "Mon–Fri · 9am–5pm", "phone": "03-3140 7788",
+        "accepted": ["Paper", "Plastic", "Organic", "Metal"],
+    },
+]
+
+COLLECTION_SCHEDULE = [
+    {"id": "s1", "type": "General Waste", "days": "Mon · Wed · Fri", "area": "All Sepang zones", "color": "#64748b", "next": "Tomorrow, 7:00 AM"},
+    {"id": "s2", "type": "Recyclables (3R)", "days": "Tuesday", "area": "Residential zones", "color": "#10b981", "next": "In 3 days, 8:00 AM"},
+    {"id": "s3", "type": "Garden Waste", "days": "1st & 3rd Saturday", "area": "Landed housing", "color": "#22c55e", "next": "Sat, 9:00 AM"},
+    {"id": "s4", "type": "Bulky Waste", "days": "By appointment", "area": "On request", "color": "#f97316", "next": "Request needed"},
+    {"id": "s5", "type": "E-Waste Pickup", "days": "Last Sunday monthly", "area": "All zones", "color": "#06b6d4", "next": "28th, 10:00 AM"},
+]
+
+ANNOUNCEMENTS = [
+    {"id": "a1", "title": "Sungai Pelek Coastal Clean-Up Drive", "body": "Join 500+ volunteers this Saturday at Bagan Lalang beach. Earn 2x reward points!", "tag": "Community", "date": "This Saturday"},
+    {"id": "a2", "title": "Aluminium Cans Bonus Week", "body": "Get RM5.00/kg for aluminium cans (was RM4.50) at all Buy-Back Centres until month end.", "tag": "Campaign", "date": "Until 30th"},
+    {"id": "a3", "title": "New Drive-Through opens in Kota Warisan", "body": "Faster drop-offs, no queue. Now accepting e-waste and organic recyclables.", "tag": "Update", "date": "Now open"},
+]
