@@ -6,6 +6,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 import logging
+import math
 import secrets
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -170,6 +171,13 @@ class ComplaintInput(BaseModel):
     lng: Optional[float] = None
     address: Optional[str] = None
     photo_path: Optional[str] = None
+
+
+class AssistantInput(BaseModel):
+    message: str
+    session_id: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 
 # ---------- Auth routes ----------
@@ -508,6 +516,100 @@ async def list_complaints(user: dict = Depends(get_current_user)):
     for d in docs:
         d["id"] = str(d.pop("_id"))
     return docs
+
+
+# ---------- Citizen: AI assistant (ChatGPT / OpenAI GPT-5.4) ----------
+def _haversine_km(lat1, lng1, lat2, lng2):
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dl = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return round(2 * r * math.asin(math.sqrt(a)), 2)
+
+
+def _nearest_centers(lat, lng, n=3):
+    ranked = []
+    for c in sd.BUY_BACK_CENTERS:
+        d = _haversine_km(lat, lng, c["lat"], c["lng"])
+        ranked.append({**c, "distance_km": d})
+    ranked.sort(key=lambda x: x["distance_km"])
+    return ranked[:n]
+
+
+CITIZEN_ASSISTANT_PROMPT = (
+    "You are the SPARK Citizen Assistant, a friendly recycling helper for residents, businesses, schools and "
+    "tourists in Sepang district, Selangor, Malaysia (Alam Flora recycling programme). "
+    "You help people: find the NEAREST recycling centres from their location, understand which items are accepted, "
+    "check current buy-back rates and how many reward points/RM they earn, know collection schedules, and how to "
+    "report dumping. Reply in the SAME language the user writes in (English or Bahasa Malaysia). "
+    "Be concise, warm and practical. When recommending centres, list them shortest-distance-first with the distance, "
+    "type, opening hours and a Google Maps directions link if provided in context. "
+    "Only use the facts given in the CONTEXT below — never invent centres, rates or hours. "
+    "End location answers by inviting them to open the Locator tab for the map."
+)
+
+
+def _build_context(lat, lng):
+    lines = ["=== CONTEXT (authoritative data) ==="]
+    if lat is not None and lng is not None:
+        lines.append(f"User location: {lat}, {lng}")
+        lines.append("Nearest recycling centres (closest first):")
+        for c in _nearest_centers(lat, lng):
+            maps = f"https://www.google.com/maps/dir/?api=1&destination={c['lat']},{c['lng']}"
+            lines.append(
+                f"- {c['name']} ({c['type']}) — {c['distance_km']} km away · {c['hours']} · "
+                f"accepts {', '.join(c['accepted'])} · phone {c['phone']} · directions: {maps}"
+            )
+    else:
+        lines.append("User location: NOT shared. Ask them to enable location or open the Locator tab. "
+                     "All Sepang centres:")
+        for c in sd.BUY_BACK_CENTERS:
+            lines.append(f"- {c['name']} ({c['type']}) · {c['hours']} · accepts {', '.join(c['accepted'])}")
+    lines.append("Buy-back rates (RM per kg / points per kg): " +
+                 "; ".join(f"{r['item']} RM{r['rate']:.2f}/{r['points']}pts" for r in sd.RECYCLING_RATES))
+    lines.append("Collection schedule: " +
+                 "; ".join(f"{s['type']} — {s['days']} ({s['next']})" for s in sd.COLLECTION_SCHEDULE))
+    lines.append("Points conversion: 100 points = RM 1.00.")
+    lines.append("=== END CONTEXT ===")
+    return "\n".join(lines)
+
+
+@api_router.post("/citizen/assistant")
+async def citizen_assistant(body: AssistantInput, user: dict = Depends(get_current_user)):
+    context = _build_context(body.lat, body.lng)
+    full_message = f"{context}\n\nUser question: {body.message}"
+
+    await db.assistant_messages.insert_one({
+        "session_id": body.session_id, "role": "user", "content": body.message,
+        "user_id": user["id"], "created_at": datetime.now(timezone.utc).isoformat()})
+
+    async def event_generator():
+        collected = ""
+        try:
+            chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=body.session_id,
+                           system_message=CITIZEN_ASSISTANT_PROMPT).with_model("openai", "gpt-5.4")
+            async for ev in chat.stream_message(UserMessage(text=full_message)):
+                if isinstance(ev, TextDelta):
+                    collected += ev.content
+                    yield ev.content
+                elif isinstance(ev, StreamDone):
+                    break
+        except Exception as e:
+            logger.error(f"citizen assistant error: {e}")
+            yield "Sorry, the assistant is temporarily unavailable. Please try again shortly."
+        finally:
+            await db.assistant_messages.insert_one({
+                "session_id": body.session_id, "role": "assistant", "content": collected,
+                "user_id": user["id"], "created_at": datetime.now(timezone.utc).isoformat()})
+
+    return StreamingResponse(event_generator(), media_type="text/plain",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@api_router.get("/citizen/nearest")
+async def citizen_nearest(lat: float, lng: float, user: dict = Depends(get_current_user)):
+    return _nearest_centers(lat, lng, n=len(sd.BUY_BACK_CENTERS))
 
 
 app.include_router(api_router)

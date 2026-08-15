@@ -1,0 +1,45 @@
+{
+  "summary": "SPARK Citizen AI Assistant (ChatGPT / OpenAI GPT-5.4) + /api/citizen/nearest — full end-to-end pass. Added /app/backend/tests/test_citizen_assistant.py with 9 pytest cases: all 9/9 passed on the public preview URL (10.7s). Real OpenAI GPT-5.4 streaming via emergentintegrations LlmChat verified end-to-end: text/plain stream, grounded on the 6 real Sepang centres (no invented names), closest-first ordering when lat=2.69/lng=101.75, correct rate (RM 4.50 for aluminium), correct schedule (Tuesday for 3R). Frontend Playwright drove login (citizen@spark.my/citizen123) with geolocation granted to Sepang town, clicked assistant-launcher (panel shows 'ChatGPT · GPT-5.4', geo pill = 'Located'), clicked assistant-suggest-0 -> received a 643-char streamed reply with 3 clickable Directions anchors pointing to valid https://www.google.com/maps/dir URLs, nearest = '3R on Wheels · Sepang Town Stop — 0.12 km'. Second turn via assistant-input + assistant-send returned the correct aluminium rate. Launcher persists across Home/Locator/Wallet tabs (assistant lives in the Citizen shell). Skills loaded: ai-testing-core + ai-testing-llm. Iteration_1 planner AI and iteration_2 citizen wallet/upload/complaints were NOT re-tested per handoff note.",
+  "ai_feature_verdicts": [
+    "Citizen assistant streaming (OpenAI GPT-5.4 via POST /api/citizen/assistant) - pass - evidence: HTTP 200 text/plain; charset=utf-8; a 643-char reply for the 'nearest centre' prompt at lat=2.69,lng=101.75 listing '3R on Wheels · Sepang Town Stop — 0.12 km' first, then 'Alam Flora BBC Sungai Pelek — 4.52 km', then 'Alam Flora BBC KLIA — 7.52 km', each with a real Google Maps directions URL. Grounded (only 6 known centre names appear, no invented ones). Correct RM 4.50 for aluminium cans, correct 'Tuesday' for 3R collection. Command: pytest tests/test_citizen_assistant.py -v -> 9/9 passed in 10.74s.",
+    "Citizen nearest endpoint (GET /api/citizen/nearest) - pass - evidence: returns 6 centres sorted ascending by distance_km with data[0].name == '3R on Wheels · Sepang Town Stop' and data[0].distance_km ≈ 0.12 km; auth required (401 without token); no _id leaks. Command: pytest tests/test_citizen_assistant.py::TestNearest -v.",
+    "Planner Claude LLM (chat + simulate) - not-in-scope-this-iteration - passed iteration_1 (25/25), untouched.",
+    "Citizen wallet/upload/complaints - not-in-scope-this-iteration - passed iteration_2 (18/18), untouched."
+  ],
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "critical_code_review_comments": [
+    "Grounding is strong: CITIZEN_ASSISTANT_PROMPT explicitly forbids inventing centres, and _build_context injects the 3 nearest with pre-computed distances + Google Maps URLs — the model consistently reused those exact facts across all runs.",
+    "Streaming timeouts: emergentintegrations LlmChat.stream_message is invoked without a per-request timeout guard. A slow upstream would hang the connection; consider wrapping with asyncio.wait_for() and yielding a friendly message on TimeoutError (the existing except only catches synchronous exceptions).",
+    "Assistant.js: fetch() has no timeout / AbortController; if the stream stalls, the 'thinking…' placeholder can appear stuck. Consider a client-side abort after ~90s.",
+    "server.py POST /api/citizen/assistant persists both user + assistant messages in db.assistant_messages, but there's no GET /api/citizen/assistant/history/{session_id} equivalent to the planner /api/ai/history/{session_id}. Minor gap if the panel is ever meant to survive a refresh.",
+    "Assistant.js render() splits on parenthesised regex — the URL will be captured but also *included as visible plain text* in the render output ('Directions:' followed by the anchor and then the URL string is hidden by the anchor rewrite). This works correctly in practice (confirmed 3 anchors + valid hrefs), but the fallback text branch could accidentally show the raw URL if the regex misses. Consider a stricter link parser."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_citizen_assistant.py",
+    "/app/test_reports/pytest/citizen_assistant_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: add asyncio.wait_for()/AbortController timeouts on the stream_message call and the frontend fetch to protect against slow-upstream hangs.",
+    "OPTIONAL: add GET /api/citizen/assistant/history/{session_id} so the panel can reload past turns after a refresh (parity with planner /api/ai/history)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_citizen_assistant.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 new assistant + nearest tests; iteration_1 25/25 + iteration_2 18/18 untouched, both previously green)",
+    "frontend": "100% (launcher opens, geo=Located, suggested prompt streams grounded closest-first reply with 3 valid Directions anchors, input+send works, launcher persists across all tabs)"
+  },
+  "test_credentials": "citizen@spark.my / citizen123 (verified working; source: /app/memory/test_credentials.md).",
+  "seed_data_creation": "None new. The 9 assistant streaming turns wrote 18 rows to db.assistant_messages (user+assistant per turn) under session_ids prefixed 'test-' and 'cit-' — small, safe to leave.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "New assistant suite lives at /app/backend/tests/test_citizen_assistant.py — run with `pytest tests/test_citizen_assistant.py -v` (needs REACT_APP_BACKEND_URL exported). Streaming tests use requests.iter_content(); each turn takes ~1-2s from the preview URL, entire suite ~11s. If you need to re-verify grounding: any lat/lng in Sepang (~2.6-2.85 lat, ~101.68-101.76 lng) will map to the 6 seeded centres in sepang_data.BUY_BACK_CENTERS — for the test coord (2.69, 101.75) nearest = '3R on Wheels · Sepang Town Stop' (id: 3r-sepang-town) at ~0.12 km. Frontend Assistant lives in /app/frontend/src/pages/citizen/Assistant.js and is mounted once inside /app/frontend/src/pages/Citizen.js so it persists across all 6 citizen tabs. The 'thinking…' placeholder is shown until the first chunk arrives; grant geolocation in Playwright with page.context.grant_permissions([\"geolocation\"]) + set_geolocation. The frontend renders URLs as 'Directions' anchors via a regex in Assistant.js:render() — verify with page.locator('a:has-text(\"Directions\")').count()."
+}

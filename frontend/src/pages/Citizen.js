@@ -10,6 +10,7 @@ import CalculatorView from "./citizen/CalculatorView";
 import WalletView from "./citizen/WalletView";
 import ScheduleView from "./citizen/ScheduleView";
 import ReportView from "./citizen/ReportView";
+import Assistant from "./citizen/Assistant";
 import { WalletCtx } from "./citizen/walletContext";
 
 const TABS = [
@@ -90,6 +91,8 @@ export default function Citizen() {
             </button>
           ))}
         </nav>
+
+        <Assistant />
       </div>
     </WalletCtx.Provider>
   );
