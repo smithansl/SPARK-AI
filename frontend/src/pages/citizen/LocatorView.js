@@ -7,10 +7,13 @@ import api from "../../lib/api";
 import { CARTO_TILE_URL } from "../../lib/geo";
 
 const TYPE_COLOR = {
-  "Buy-Back Centre": "#10b981",
-  "Drive-Through (DTRC)": "#06b6d4",
-  "3R on Wheels": "#f97316",
+  "Drop-Off Recycling Centre": "#10b981",
+  "Recycling Centre": "#06b6d4",
+  "Scrap Metal Dealer": "#f97316",
+  "Used Cooking Oil Collection": "#eab308",
+  "E-Waste (ERTH)": "#a855f7",
 };
+const typeColor = (t) => TYPE_COLOR[t] || "#94a3b8";
 
 function centerIcon(color) {
   return L.divIcon({
@@ -37,17 +40,17 @@ export default function LocatorView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3 border border-slate-800 h-[380px] relative">
-          <MapContainer center={[2.74, 101.72]} zoom={11} scrollWheelZoom attributionControl={false} style={{ height: "100%", width: "100%" }}>
+          <MapContainer center={[2.76, 101.70]} zoom={10} scrollWheelZoom attributionControl={false} style={{ height: "100%", width: "100%" }}>
             <TileLayer url={CARTO_TILE_URL} attribution="" />
             {centers.map((c) => (
-              <Marker key={c.id} position={[c.lat, c.lng]} icon={centerIcon(TYPE_COLOR[c.type] || "#10b981")}
+              <Marker key={c.id} position={[c.lat, c.lng]} icon={centerIcon(typeColor(c.type))}
                 eventHandlers={{ click: () => setActive(c) }}>
                 <Tooltip><div style={{ fontFamily: "JetBrains Mono", fontSize: 11 }}>{c.name}<br />{c.hours}</div></Tooltip>
               </Marker>
             ))}
           </MapContainer>
           <div className="absolute bottom-3 left-3 z-[500] glass px-3 py-2 space-y-1">
-            {Object.entries(TYPE_COLOR).map(([t, c]) => (
+            {Object.entries(TYPE_COLOR).filter(([t]) => centers.some((c) => c.type === t)).map(([t, c]) => (
               <div key={t} className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
                 <span className="text-[10px] text-slate-300 font-mono-data">{t}</span>
@@ -62,10 +65,10 @@ export default function LocatorView() {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}
               className={`w-full text-left glass border p-3 transition-colors ${active?.id === c.id ? "border-emerald-400" : "border-slate-800 hover:border-slate-600"}`}>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TYPE_COLOR[c.type] }} />
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: typeColor(c.type) }} />
                 <span className="font-display font-bold text-sm">{c.name}</span>
               </div>
-              <div className="font-mono-data text-[10px] uppercase tracking-widest text-slate-500 mt-1">{c.type}</div>
+              <div className="font-mono-data text-[10px] uppercase tracking-widest text-slate-500 mt-1">{c.type} · {c.area}</div>
               <div className="flex items-center gap-1.5 text-xs text-slate-300 mt-2"><Clock className="w-3 h-3 text-emerald-400" /> {c.hours}</div>
               <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1"><Phone className="w-3 h-3 text-slate-500" /> {c.phone}</div>
               <div className="flex flex-wrap gap-1 mt-2">
