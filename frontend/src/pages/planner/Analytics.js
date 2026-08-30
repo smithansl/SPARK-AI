@@ -5,10 +5,10 @@ import { motion } from "framer-motion";
 import api, { API } from "../../lib/api";
 
 const SUGGESTED = [
-  "Where are future waste hotspots in Sepang?",
+  "Which land use dominates the critical waste zones?",
   "Where should a new recovery facility be located?",
   "What happens if population increases by 20%?",
-  "Which areas have poor collection coverage?",
+  "Which land-use category generates the most recyclable waste?",
 ];
 
 function renderContent(text) {
@@ -58,13 +58,15 @@ export default function Analytics() {
     setMessages((m) => [...m, { role: "user", content: q }, { role: "assistant", content: "" }]);
     setStreaming(true);
     try {
+      let layerIds = null;
+      try { layerIds = JSON.parse(localStorage.getItem("spark_active_layers") || "null"); } catch { layerIds = null; }
       const res = await fetch(`${API}/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("spark_token")}`,
         },
-        body: JSON.stringify({ message: q, session_id: sessionId }),
+        body: JSON.stringify({ message: q, session_id: sessionId, layer_ids: layerIds }),
       });
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -100,7 +102,7 @@ export default function Analytics() {
             <Brain className="w-4 h-4" /> SPARK Planning Intelligence
           </div>
           <h1 className="font-display text-2xl font-black tracking-tight mt-1">AI Planning Copilot</h1>
-          <p className="text-sm text-slate-400">Ask SPARK about your spatial planning problem — answers come as Evidence → Analysis → Projection → Recommendation.</p>
+          <p className="text-sm text-slate-400">Ask SPARK about your spatial planning problem — it reads your active map layers and answers as Evidence → Analysis → Projection → Recommendation.</p>
         </div>
         <button data-testid="new-chat-btn" onClick={newChat}
           className="shrink-0 flex items-center gap-2 border border-slate-700 px-3 py-2 font-mono-data text-[10px] uppercase tracking-widest text-cyan-400 hover:border-cyan-400 transition-colors">

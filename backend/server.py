@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field, EmailStr
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
 import sepang_data as sd
+import layer_analysis
 
 # ---------- DB ----------
 mongo_url = os.environ['MONGO_URL']
@@ -140,6 +141,7 @@ class ReportInput(BaseModel):
 class ChatInput(BaseModel):
     message: str
     session_id: str
+    layer_ids: Optional[List[str]] = None
 
 
 class SimInput(BaseModel):
@@ -332,7 +334,10 @@ SYSTEM_PROMPT = (
     "**RECOMMENDATION** — a concrete planning action with priority and location.\n"
     "Be concise, professional and specific to Sepang zones (Labu Lanjut, KLIA/Sepang, Salak Tinggi, Dengkil, "
     "Sungai Pelek, Bagan Lalang, Kota Warisan, Sepang Town). Use figures where useful.\n"
-    "District context: total waste ~42.8 t/month, avg recovery 73%, 6 critical/high hotspots, projected +18-24% waste by 2030."
+    "District context: total waste ~42.8 t/month, avg recovery 73%, 6 critical/high hotspots, projected +18-24% waste by 2030.\n"
+    "You also have access to the planner's ACTIVE MAP LAYER DATA (waste choropleth + land-use). When the user asks "
+    "about the layers on the map (e.g. which land use dominates critical waste zones), use the CROSS-ANALYSIS figures "
+    "provided in the layer data block and cite the exact percentages."
 )
 
 
@@ -342,12 +347,19 @@ async def ai_chat(body: ChatInput, user: dict = Depends(get_current_user)):
         "session_id": body.session_id, "role": "user", "content": body.message,
         "user_id": user["id"], "created_at": datetime.now(timezone.utc).isoformat()})
 
+    try:
+        layer_ctx = layer_analysis.layer_context_text(body.layer_ids)
+    except Exception as e:
+        logger.error(f"layer context error: {e}")
+        layer_ctx = ""
+    full_message = f"{layer_ctx}\n\nPlanner question: {body.message}" if layer_ctx else body.message
+
     async def event_generator():
         collected = ""
         try:
             chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=body.session_id,
                            system_message=SYSTEM_PROMPT).with_model("anthropic", "claude-sonnet-4-6")
-            async for ev in chat.stream_message(UserMessage(text=body.message)):
+            async for ev in chat.stream_message(UserMessage(text=full_message)):
                 if isinstance(ev, TextDelta):
                     collected += ev.content
                     yield ev.content

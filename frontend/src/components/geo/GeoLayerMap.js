@@ -12,7 +12,7 @@ export default function GeoLayerMap({ layers, layerState, center = [2.74, 101.72
       attributionControl={false}
       style={{ height: "100%", width: "100%" }}
     >
-      <TileLayer url={CARTO_TILE_URL} attribution="" />
+      <TileLayer url={CARTO_TILE_URL} attribution="" crossOrigin="anonymous" />
       {layers
         .filter((l) => layerState[l.id]?.visible)
         .map((l) => (

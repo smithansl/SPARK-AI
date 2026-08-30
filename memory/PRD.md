@@ -66,3 +66,11 @@ Endpoints /api/citizen/assistant (streaming) + /api/citizen/nearest. Tested 9/9.
 - Carto keyed basemap replaces default tiles across all maps → watermark removed.
 - Planner AI copilot now has persistent chat history (session in localStorage, loads /api/ai/history,
   New Chat button). Tested 8/8 backend + all UI flows.
+
+## Update — AI Reads Layers + Layer Export
+- Copilot spatial cross-analysis: /api/ai/chat accepts active layer_ids; layer_analysis.py runs a real
+  point-in-polygon overlay of the waste choropleth vs dissolved land-use, so the copilot answers e.g.
+  "which land use dominates critical waste zones" with grounded figures (Komersial 43% of High+Critical,
+  100% of Critical). Analytics sends active layers via localStorage 'spark_active_layers'.
+- Layer export: per-layer GeoJSON download (exportLayerGeoJSON) + full map PNG export (html-to-image).
+  Carto tiles set crossOrigin for canvas capture. Tested 5/5 backend + UI.

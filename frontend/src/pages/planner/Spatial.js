@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
-import { Layers, Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Layers, Plus, Trash2, Eye, EyeOff, Download, Image as ImageIcon, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import api from "../../lib/api";
 import GeoLayerMap from "../../components/geo/GeoLayerMap";
 import Legend from "../../components/geo/Legend";
 import AddLayerModal from "../../components/geo/AddLayerModal";
+import { exportLayerGeoJSON, exportMapImage } from "../../lib/exportUtils";
 
 export default function Spatial() {
   const [layers, setLayers] = useState([]);
   const [layerState, setLayerState] = useState({});
   const [showAdd, setShowAdd] = useState(false);
+  const [exportingImg, setExportingImg] = useState(false);
+  const mapRef = useRef(null);
 
   const initState = (list) => {
     setLayerState((prev) => {
@@ -26,6 +29,11 @@ export default function Spatial() {
     api.get("/geo/layers").then((r) => { setLayers(r.data); initState(r.data); });
 
   useEffect(() => { loadLayers(); }, []);
+
+  useEffect(() => {
+    const active = Object.entries(layerState).filter(([, s]) => s.visible).map(([id]) => id);
+    localStorage.setItem("spark_active_layers", JSON.stringify(active));
+  }, [layerState]);
 
   const toggle = (id) => setLayerState((s) => ({ ...s, [id]: { ...s[id], visible: !s[id]?.visible } }));
   const setOpacity = (id, v) => setLayerState((s) => ({ ...s, [id]: { ...s[id], opacity: Number(v) } }));
@@ -45,11 +53,23 @@ export default function Spatial() {
     setLayerState((s) => ({ ...s, [layer.id]: { visible: true, opacity: layer.style.opacity ?? 0.6 } }));
   };
 
+  const exportGeoJSON = async (layer) => {
+    try { await exportLayerGeoJSON(layer); toast.success(`Exported ${layer.name}.geojson`); }
+    catch { toast.error("Export failed"); }
+  };
+
+  const exportImage = async () => {
+    setExportingImg(true);
+    try { await exportMapImage(mapRef.current, "sepang-spatial-intelligence.png"); toast.success("Map image exported"); }
+    catch { toast.error("Image export failed"); }
+    finally { setExportingImg(false); }
+  };
+
   const activeCount = Object.values(layerState).filter((s) => s.visible).length;
 
   return (
     <div className="relative h-[calc(100vh-56px)] w-full">
-      <div className="absolute inset-0">
+      <div className="absolute inset-0" ref={mapRef}>
         <GeoLayerMap layers={layers} layerState={layerState} />
       </div>
 
@@ -58,6 +78,13 @@ export default function Spatial() {
         <div className="font-mono-data text-[10px] uppercase tracking-[0.3em] text-cyan-400">Spatial Intelligence</div>
         <div className="font-display text-sm font-bold">Sepang GIS · {activeCount} layer{activeCount !== 1 ? "s" : ""} active</div>
       </div>
+
+      {/* Export map image */}
+      <button data-testid="export-map-image" onClick={exportImage} disabled={exportingImg}
+        className="absolute top-3 right-3 z-[500] glass flex items-center gap-2 px-4 py-2.5 font-mono-data text-[10px] uppercase tracking-widest text-cyan-400 hover:border-cyan-400 transition-colors disabled:opacity-60">
+        {exportingImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+        {exportingImg ? "Rendering…" : "Export Image"}
+      </button>
 
       {/* Layer manager */}
       <motion.div initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
@@ -90,6 +117,9 @@ export default function Spatial() {
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
+                  <button data-testid={`layer-export-${l.id}`} onClick={() => exportGeoJSON(l)} title="Export GeoJSON" className="text-slate-600 hover:text-cyan-400 transition-colors shrink-0">
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 {st.visible && (
                   <div className="mt-2">
