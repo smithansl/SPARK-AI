@@ -4,6 +4,7 @@ import L from "leaflet";
 import { Clock, Phone, MapPin, Navigation } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../../lib/api";
+import { CARTO_TILE_URL } from "../../lib/geo";
 
 const TYPE_COLOR = {
   "Buy-Back Centre": "#10b981",
@@ -36,8 +37,8 @@ export default function LocatorView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3 border border-slate-800 h-[380px] relative">
-          <MapContainer center={[2.74, 101.72]} zoom={11} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution="&copy; OpenStreetMap" />
+          <MapContainer center={[2.74, 101.72]} zoom={11} scrollWheelZoom attributionControl={false} style={{ height: "100%", width: "100%" }}>
+            <TileLayer url={CARTO_TILE_URL} attribution="" />
             {centers.map((c) => (
               <Marker key={c.id} position={[c.lat, c.lng]} icon={centerIcon(TYPE_COLOR[c.type] || "#10b981")}
                 eventHandlers={{ click: () => setActive(c) }}>

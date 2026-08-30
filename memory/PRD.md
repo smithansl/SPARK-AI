@@ -49,3 +49,20 @@ Replaced the simple citizen page with a full 6-module recycling app:
 - Public Reporting/Complaints (category, description, geolocation tag, camera photo upload)
 Backend added: /api/recycling/{rates,centers,schedule}, /api/announcements, /api/wallet(+dropoff,+convert),
 /api/upload + /api/files (Emergent object storage), /api/complaints. Tested 18/18 backend + 6/6 UI.
+
+## Update — Citizen AI Assistant (ChatGPT)
+Floating chatbot in Citizen app powered by OpenAI GPT-5.4 (Emergent key). Finds nearest recycling
+centres from live geolocation (haversine), answers rates/accepted-items/schedule, grounded on real data.
+Endpoints /api/citizen/assistant (streaming) + /api/citizen/nearest. Tested 9/9.
+
+## Update — GeoJSON Layer System + Chat History
+- Reusable GIS layer system on Spatial Intelligence: per-attribute graduated/categorized styling,
+  transparency sliders, legend, toggle on/off, and GeoJSON upload+configure (stored in object storage).
+  Backend: geo_layers collection + /api/geo/layers (GET/POST/DELETE) + /api/geo/data/{id}.
+- Two built-in layers seeded: Annual Recyclable Waste (graduated 5-class on recy_annual_t) and
+  Current Land Use / Guna Tanah (categorized on gtn1, exact Malay legend). Source GeoJSON was
+  simplified + dissolved-by-category (original land-use 111MB/128k features → 12 features/8.3MB) for
+  browser rendering; attributes/categories preserved.
+- Carto keyed basemap replaces default tiles across all maps → watermark removed.
+- Planner AI copilot now has persistent chat history (session in localStorage, loads /api/ai/history,
+  New Chat button). Tested 8/8 backend + all UI flows.

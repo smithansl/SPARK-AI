@@ -6,6 +6,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 import logging
+import json
 import math
 import secrets
 import uuid
@@ -178,6 +179,13 @@ class AssistantInput(BaseModel):
     session_id: str
     lat: Optional[float] = None
     lng: Optional[float] = None
+
+
+class GeoLayerCreate(BaseModel):
+    name: str
+    style: dict
+    geojson: dict
+    description: Optional[str] = None
 
 
 # ---------- Auth routes ----------
@@ -612,6 +620,66 @@ async def citizen_nearest(lat: float, lng: float, user: dict = Depends(get_curre
     return _nearest_centers(lat, lng, n=len(sd.BUY_BACK_CENTERS))
 
 
+# ---------- Reusable GeoJSON layer system ----------
+def _clean_layer(doc):
+    doc["id"] = doc.pop("_id") if "_id" in doc and isinstance(doc["_id"], str) else doc.get("id")
+    doc.pop("_id", None)
+    doc.pop("storage_path", None)
+    return doc
+
+
+@api_router.get("/geo/layers")
+async def geo_layers(user: dict = Depends(get_current_user)):
+    docs = await db.geo_layers.find({"is_deleted": {"$ne": True}}).sort("created_at", 1).to_list(200)
+    return [_clean_layer(d) for d in docs]
+
+
+@api_router.post("/geo/layers")
+async def create_geo_layer(body: GeoLayerCreate, user: dict = Depends(get_current_user)):
+    layer_id = str(uuid.uuid4())
+    path = f"{APP_NAME}/geo/{user['id']}/{layer_id}.geojson"
+    data = json.dumps(body.geojson).encode("utf-8")
+    put_object(path, data, "application/json")
+    n_features = len(body.geojson.get("features", []))
+    doc = {"id": layer_id, "name": body.name, "description": body.description,
+           "source": "upload", "url": None, "storage_path": path, "style": body.style,
+           "feature_count": n_features, "builtin": False, "is_deleted": False,
+           "owner_id": user["id"], "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.geo_layers.insert_one(doc)
+    return _clean_layer(dict(doc))
+
+
+@api_router.get("/geo/data/{layer_id}")
+async def geo_data(layer_id: str, authorization: str = Header(None), auth: str = Query(None)):
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+    elif auth:
+        token = auth
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    doc = await db.geo_layers.find_one({"id": layer_id, "is_deleted": {"$ne": True}})
+    if not doc or not doc.get("storage_path"):
+        raise HTTPException(status_code=404, detail="Layer data not found")
+    data, ct = get_object(doc["storage_path"])
+    return Response(content=data, media_type="application/json")
+
+
+@api_router.delete("/geo/layers/{layer_id}")
+async def delete_geo_layer(layer_id: str, user: dict = Depends(get_current_user)):
+    doc = await db.geo_layers.find_one({"id": layer_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Not found")
+    if doc.get("builtin"):
+        raise HTTPException(status_code=400, detail="Built-in layers cannot be deleted")
+    await db.geo_layers.update_one({"id": layer_id}, {"$set": {"is_deleted": True}})
+    return {"ok": True}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -647,6 +715,61 @@ async def startup():
         await db.users.insert_one({"name": "Aisha Citizen", "email": citizen_email,
                                    "password_hash": hash_password("citizen123"), "role": "citizen",
                                    "created_at": datetime.now(timezone.utc).isoformat()})
+    await _seed_geo_layers()
+
+
+async def _seed_geo_layers():
+    builtins = [
+        {
+            "id": "builtin-waste-recy",
+            "name": "Annual Recyclable Waste",
+            "description": "recy_annual_t (tonnes/year) · graduated 5-class",
+            "source": "builtin", "url": "/geo/pop_waste.geojson", "storage_path": None,
+            "builtin": True, "is_deleted": False, "feature_count": 344,
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "style": {
+                "mode": "graduated", "attribute": "recy_annual_t",
+                "opacity": 0.65, "stroke": "#0b1220", "strokeWidth": 0.6,
+                "labelAttr": "nama",
+                "classes": [
+                    {"label": "Very Low · 0–19.16", "min": 0, "max": 19.16, "color": "#1a9850"},
+                    {"label": "Low · 19.16–30.47", "min": 19.16, "max": 30.47, "color": "#a6d96a"},
+                    {"label": "Moderate · 30.47–47.22", "min": 30.47, "max": 47.22, "color": "#fee08b"},
+                    {"label": "High · 47.22–83.02", "min": 47.22, "max": 83.02, "color": "#fc8d59"},
+                    {"label": "Critical · 83.02–194.62", "min": 83.02, "max": 194.62, "color": "#d73027"},
+                ],
+            },
+        },
+        {
+            "id": "builtin-landuse",
+            "name": "Current Land Use (Guna Tanah)",
+            "description": "gtn1 land-use category · categorized",
+            "source": "builtin", "url": "/geo/landuse_min.geojson", "storage_path": None,
+            "builtin": True, "is_deleted": False, "feature_count": 12,
+            "created_at": "2026-01-02T00:00:00+00:00",
+            "style": {
+                "mode": "categorized", "attribute": "gtn1",
+                "opacity": 0.6, "stroke": "#334155", "strokeWidth": 0.8,
+                "labelAttr": "gtn1",
+                "categories": [
+                    {"value": "Tanah Lapang dan Rekreasi", "color": "#8EEA00"},
+                    {"value": "Tanah Kosong", "color": "#808000"},
+                    {"value": "Perumahan", "color": "#F4A582"},
+                    {"value": "Pertanian", "color": "#A6D785"},
+                    {"value": "Pengangkutan", "color": "#FFF200"},
+                    {"value": "Pantai", "color": "#A9DFF0"},
+                    {"value": "Komersial", "color": "#2878E8"},
+                    {"value": "Institusi dan Kemudahan Masyarakat", "color": "#F08080"},
+                    {"value": "Infrastruktur dan Utiliti", "color": "#FFFFFF", "outline": "#e11d48"},
+                    {"value": "Industri", "color": "#A875C8"},
+                    {"value": "Hutan", "color": "#168B2C"},
+                    {"value": "Badan Air", "color": "#12D9E5"},
+                ],
+            },
+        },
+    ]
+    for b in builtins:
+        await db.geo_layers.update_one({"id": b["id"]}, {"$set": b}, upsert=True)
 
 
 @app.on_event("shutdown")

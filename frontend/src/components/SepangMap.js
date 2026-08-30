@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer, CircleMarker, Tooltip, Polyline, useMap, Marker } from "react-leaflet";
 import L from "leaflet";
 import { useEffect } from "react";
+import { CARTO_TILE_URL } from "../lib/geo";
 
 export const SEVERITY_COLOR = {
   critical: "#ef4444",
@@ -45,11 +46,9 @@ export default function SepangMap({
       scrollWheelZoom
       style={{ height: "100%", width: "100%" }}
       zoomControl={true}
+      attributionControl={false}
     >
-      <TileLayer
-        attribution='&copy; OpenStreetMap'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-      />
+      <TileLayer attribution="" url={CARTO_TILE_URL} />
       <FlyTo target={flyTarget} />
 
       {routes.map((r) =>

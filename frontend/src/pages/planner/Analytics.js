@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Brain, Send, Sparkles, Map as MapIcon, FlaskConical, FileText, User } from "lucide-react";
+import { Brain, Send, Sparkles, Map as MapIcon, FlaskConical, FileText, User, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { API } from "../../lib/api";
+import api, { API } from "../../lib/api";
 
 const SUGGESTED = [
   "Where are future waste hotspots in Sepang?",
@@ -24,11 +24,28 @@ function renderContent(text) {
 
 export default function Analytics() {
   const navigate = useNavigate();
-  const [sessionId] = useState(() => "copilot-" + Math.random().toString(36).slice(2, 10));
+  const [sessionId, setSessionId] = useState(() => {
+    let s = localStorage.getItem("spark_copilot_session");
+    if (!s) { s = "copilot-" + Math.random().toString(36).slice(2, 10); localStorage.setItem("spark_copilot_session", s); }
+    return s;
+  });
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    api.get(`/ai/history/${sessionId}`).then((r) => {
+      if (r.data && r.data.length) setMessages(r.data);
+    }).catch(() => {});
+  }, [sessionId]);
+
+  const newChat = () => {
+    const s = "copilot-" + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem("spark_copilot_session", s);
+    setSessionId(s);
+    setMessages([]);
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -77,12 +94,18 @@ export default function Analytics() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]">
-      <div className="p-6 border-b border-slate-800">
-        <div className="flex items-center gap-2 font-mono-data text-xs uppercase tracking-[0.3em] text-cyan-400">
-          <Brain className="w-4 h-4" /> SPARK Planning Intelligence
+      <div className="p-6 border-b border-slate-800 flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 font-mono-data text-xs uppercase tracking-[0.3em] text-cyan-400">
+            <Brain className="w-4 h-4" /> SPARK Planning Intelligence
+          </div>
+          <h1 className="font-display text-2xl font-black tracking-tight mt-1">AI Planning Copilot</h1>
+          <p className="text-sm text-slate-400">Ask SPARK about your spatial planning problem — answers come as Evidence → Analysis → Projection → Recommendation.</p>
         </div>
-        <h1 className="font-display text-2xl font-black tracking-tight mt-1">AI Planning Copilot</h1>
-        <p className="text-sm text-slate-400">Ask SPARK about your spatial planning problem — answers come as Evidence → Analysis → Projection → Recommendation.</p>
+        <button data-testid="new-chat-btn" onClick={newChat}
+          className="shrink-0 flex items-center gap-2 border border-slate-700 px-3 py-2 font-mono-data text-[10px] uppercase tracking-widest text-cyan-400 hover:border-cyan-400 transition-colors">
+          <Plus className="w-3.5 h-3.5" /> New Chat
+        </button>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
