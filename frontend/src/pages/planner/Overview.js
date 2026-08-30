@@ -32,12 +32,14 @@ export default function Overview() {
   const [zones, setZones] = useState([]);
   const [forecast, setForecast] = useState(null);
   const [corr, setCorr] = useState(null);
+  const [facilities, setFacilities] = useState([]);
 
   useEffect(() => {
     api.get("/kpis").then((r) => setKpis(r.data));
     api.get("/zones").then((r) => setZones(r.data));
     api.get("/forecast").then((r) => setForecast(r.data));
     api.get("/correlation").then((r) => setCorr(r.data));
+    api.get("/facilities").then((r) => setFacilities(r.data));
   }, []);
 
   const hour = new Date().getHours();
@@ -64,7 +66,7 @@ export default function Overview() {
           <div className="absolute top-3 left-3 z-[500] glass px-3 py-1.5 font-mono-data text-[10px] uppercase tracking-widest text-cyan-400">
             ● Live GIS Map · Sepang
           </div>
-          <SepangMap zones={zones} onZoneClick={() => navigate("/intelligence/spatial")} />
+          <SepangMap zones={zones} facilities={facilities} onZoneClick={() => navigate("/intelligence/spatial")} />
         </div>
 
         <div className="glass border border-slate-800 p-5 flex flex-col">

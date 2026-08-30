@@ -8,10 +8,12 @@ export default function Logistics() {
   const [routes, setRoutes] = useState([]);
   const [zones, setZones] = useState([]);
   const [active, setActive] = useState(null);
+  const [facilities, setFacilities] = useState([]);
 
   useEffect(() => {
     api.get("/routes").then((r) => setRoutes(r.data));
     api.get("/zones").then((r) => setZones(r.data));
+    api.get("/facilities").then((r) => setFacilities(r.data));
   }, []);
 
   const shown = active ? routes.filter((r) => r.id === active) : routes;
@@ -25,7 +27,7 @@ export default function Logistics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 border border-slate-800 h-[420px] relative">
-          <SepangMap zones={zones} routes={shown} zoom={11} />
+          <SepangMap zones={zones} routes={shown} facilities={facilities} zoom={11} />
         </div>
 
         <div className="space-y-3">

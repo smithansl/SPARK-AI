@@ -111,7 +111,7 @@ export default function SepangMap({
             <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>
               {f.name}
               <br />
-              {f.type} · {f.capacity} t/mo
+              {f.type}{f.capacity ? ` · ${f.capacity} t/mo` : f.address ? ` · ${f.address}` : ""}
             </div>
           </Tooltip>
         </Marker>

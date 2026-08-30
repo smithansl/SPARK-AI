@@ -129,12 +129,7 @@ ZONES = [
     },
 ]
 
-# Existing waste facilities
-FACILITIES = [
-    {"id": "mrf-salak", "name": "Salak Tinggi MRF", "lat": 2.8050, "lng": 101.7350, "type": "Material Recovery Facility", "capacity": 320},
-    {"id": "ts-sepang", "name": "Sepang Transfer Station", "lat": 2.6950, "lng": 101.7450, "type": "Transfer Station", "capacity": 180},
-    {"id": "hub-klia", "name": "KLIA Recycling Hub", "lat": 2.7500, "lng": 101.7150, "type": "Recycling Hub", "capacity": 210},
-]
+# Existing waste facilities are defined at the end of this file (derived from BUY_BACK_CENTERS)
 
 # Candidate sites for suitability analysis
 CANDIDATE_SITES = [
@@ -326,4 +321,12 @@ ANNOUNCEMENTS = [
     {"id": "a1", "title": "Sungai Pelek Coastal Clean-Up Drive", "body": "Join 500+ volunteers this Saturday at Bagan Lalang beach. Earn 2x reward points!", "tag": "Community", "date": "This Saturday"},
     {"id": "a2", "title": "Aluminium Cans Bonus Week", "body": "Get RM5.00/kg for aluminium cans (was RM4.50) at all Buy-Back Centres until month end.", "tag": "Campaign", "date": "Until 30th"},
     {"id": "a3", "title": "New Drive-Through opens in Kota Warisan", "body": "Faster drop-offs, no queue. Now accepting e-waste and organic recyclables.", "tag": "Update", "date": "Now open"},
+]
+
+
+# Existing waste facilities on the planner side — kept in sync with citizen recycling centres
+FACILITIES = [
+    {"id": c["id"], "name": c["name"], "lat": c["lat"], "lng": c["lng"],
+     "type": c["type"], "address": c.get("address", ""), "hours": c.get("hours", "")}
+    for c in BUY_BACK_CENTERS
 ]
