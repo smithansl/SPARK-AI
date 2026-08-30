@@ -1,10 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Tooltip, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Clock, Phone, MapPin, Navigation } from "lucide-react";
+import { Clock, Phone, MapPin, Navigation, LocateFixed, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "../../lib/api";
 import { CARTO_TILE_URL } from "../../lib/geo";
+
+function haversineKm(a, b) {
+  const R = 6371, toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(s)) * 10) / 10;
+}
 
 const TYPE_COLOR = {
   "Drop-Off Recycling Centre": "#10b981",
@@ -23,6 +30,14 @@ function centerIcon(color) {
   });
 }
 
+function userIcon() {
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:16px;height:16px;border-radius:50%;border:3px solid #38bdf8;background:#0ea5e9;box-shadow:0 0 0 6px rgba(56,189,248,0.25)"></div>`,
+    iconSize: [16, 16], iconAnchor: [8, 8],
+  });
+}
+
 function FitAll({ points }) {
   const map = useMap();
   useEffect(() => {
@@ -36,23 +51,58 @@ function FitAll({ points }) {
 export default function LocatorView() {
   const [centers, setCenters] = useState([]);
   const [active, setActive] = useState(null);
+  const [userLoc, setUserLoc] = useState(null);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     api.get("/recycling/centers").then((r) => { setCenters(r.data); setActive(r.data[0]); });
   }, []);
 
+  const useMyLocation = () => {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocating(false); },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  const sortedCenters = useMemo(() => {
+    if (!userLoc) return centers;
+    return [...centers]
+      .map((c) => ({ ...c, distance: haversineKm(userLoc, c) }))
+      .sort((a, b) => a.distance - b.distance);
+  }, [centers, userLoc]);
+
+  useEffect(() => {
+    if (userLoc && sortedCenters.length) setActive(sortedCenters[0]);
+  }, [userLoc]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4">
-      <div>
-        <div className="font-mono-data text-xs uppercase tracking-[0.3em] text-emerald-400">Buy-Back Locator</div>
-        <h1 className="font-display text-2xl sm:text-3xl font-black tracking-tight mt-1">Nearby Recycling Centres</h1>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="font-mono-data text-xs uppercase tracking-[0.3em] text-emerald-400">Buy-Back Locator</div>
+          <h1 className="font-display text-2xl sm:text-3xl font-black tracking-tight mt-1">Nearby Recycling Centres</h1>
+        </div>
+        <button data-testid="use-location-btn" onClick={useMyLocation} disabled={locating}
+          className="flex items-center gap-2 border border-emerald-400/40 text-emerald-400 px-4 py-2.5 font-mono-data text-[10px] uppercase tracking-widest hover:bg-emerald-400/10 transition-colors disabled:opacity-60">
+          {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+          {userLoc ? "Sorted by nearest" : locating ? "Locating…" : "Use my location"}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3 border border-slate-800 h-[380px] relative">
           <MapContainer center={[2.76, 101.70]} zoom={10} scrollWheelZoom attributionControl={false} style={{ height: "100%", width: "100%" }}>
             <TileLayer url={CARTO_TILE_URL} attribution="" />
-            <FitAll points={centers} />
+            <FitAll points={userLoc ? [...centers, userLoc] : centers} />
+            {userLoc && (
+              <Marker position={[userLoc.lat, userLoc.lng]} icon={userIcon()}>
+                <Tooltip><div style={{ fontFamily: "JetBrains Mono", fontSize: 11 }}>You are here</div></Tooltip>
+              </Marker>
+            )}
             {centers.map((c) => (
               <Marker key={c.id} position={[c.lat, c.lng]} icon={centerIcon(typeColor(c.type))}
                 eventHandlers={{ click: () => setActive(c) }}>
@@ -78,13 +128,16 @@ export default function LocatorView() {
         </div>
 
         <div className="lg:col-span-2 space-y-2 max-h-[380px] overflow-y-auto">
-          {centers.map((c, i) => (
+          {sortedCenters.map((c, i) => (
             <motion.button key={c.id} data-testid={`center-${c.id}`} onClick={() => setActive(c)}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}
               className={`w-full text-left glass border p-3 transition-colors ${active?.id === c.id ? "border-emerald-400" : "border-slate-800 hover:border-slate-600"}`}>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: typeColor(c.type) }} />
-                <span className="font-display font-bold text-sm">{c.name}</span>
+                <span className="font-display font-bold text-sm flex-1">{c.name}</span>
+                {c.distance != null && (
+                  <span data-testid={`dist-${c.id}`} className="font-mono-data text-[10px] font-bold text-emerald-400 shrink-0">{c.distance} km</span>
+                )}
               </div>
               <div className="font-mono-data text-[10px] uppercase tracking-widest text-slate-500 mt-1">{c.type} · {c.area}</div>
               <div className="text-[11px] text-slate-400 mt-1 leading-snug">{c.address}</div>
