@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Clock, Phone, MapPin, Navigation } from "lucide-react";
 import { motion } from "framer-motion";
@@ -23,6 +23,16 @@ function centerIcon(color) {
   });
 }
 
+function FitAll({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points && points.length) {
+      map.fitBounds(points.map((p) => [p.lat, p.lng]), { padding: [50, 50], maxZoom: 12 });
+    }
+  }, [points, map]);
+  return null;
+}
+
 export default function LocatorView() {
   const [centers, setCenters] = useState([]);
   const [active, setActive] = useState(null);
@@ -42,6 +52,7 @@ export default function LocatorView() {
         <div className="lg:col-span-3 border border-slate-800 h-[380px] relative">
           <MapContainer center={[2.76, 101.70]} zoom={10} scrollWheelZoom attributionControl={false} style={{ height: "100%", width: "100%" }}>
             <TileLayer url={CARTO_TILE_URL} attribution="" />
+            <FitAll points={centers} />
             {centers.map((c) => (
               <Marker key={c.id} position={[c.lat, c.lng]} icon={centerIcon(typeColor(c.type))}
                 eventHandlers={{ click: () => setActive(c) }}>
