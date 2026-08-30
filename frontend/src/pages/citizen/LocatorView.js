@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Tooltip, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Clock, Phone, MapPin, Navigation } from "lucide-react";
 import { motion } from "framer-motion";
@@ -56,6 +56,13 @@ export default function LocatorView() {
             {centers.map((c) => (
               <Marker key={c.id} position={[c.lat, c.lng]} icon={centerIcon(typeColor(c.type))}
                 eventHandlers={{ click: () => setActive(c) }}>
+                <Popup>
+                  <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 12, minWidth: 180 }}>
+                    <strong style={{ fontSize: 13 }}>{c.name}</strong>
+                    <div style={{ marginTop: 4, color: "#334155" }}>{c.address}</div>
+                    <div style={{ marginTop: 4, color: "#0f766e" }}>{c.type} · {c.hours}</div>
+                  </div>
+                </Popup>
                 <Tooltip><div style={{ fontFamily: "JetBrains Mono", fontSize: 11 }}>{c.name}<br />{c.hours}</div></Tooltip>
               </Marker>
             ))}
@@ -80,6 +87,7 @@ export default function LocatorView() {
                 <span className="font-display font-bold text-sm">{c.name}</span>
               </div>
               <div className="font-mono-data text-[10px] uppercase tracking-widest text-slate-500 mt-1">{c.type} · {c.area}</div>
+              <div className="text-[11px] text-slate-400 mt-1 leading-snug">{c.address}</div>
               <div className="flex items-center gap-1.5 text-xs text-slate-300 mt-2"><Clock className="w-3 h-3 text-emerald-400" /> {c.hours}</div>
               <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1"><Phone className="w-3 h-3 text-slate-500" /> {c.phone}</div>
               <div className="flex flex-wrap gap-1 mt-2">

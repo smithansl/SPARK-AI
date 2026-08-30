@@ -278,46 +278,39 @@ RECYCLING_RATES = [
 
 BUY_BACK_CENTERS = [
     {
+        "id": "cyberjaya-kdebwm", "name": "Cyberjaya Recycling Centre KDEBWM",
+        "type": "Recycling Centre", "area": "Cyberjaya",
+        "address": "Persiaran Rimba Permai, 63000 Cyberjaya, Selangor",
+        "lat": 2.9100, "lng": 101.6600, "hours": "Daily · 8am–6pm", "phone": "03-8890 1764",
+        "accepted": ["Paper", "Plastic", "Metal", "Glass", "E-Waste"],
+    },
+    {
         "id": "pks-kota-warisan", "name": "Pusat Kitar Semula Kota Warisan",
         "type": "Drop-Off Recycling Centre", "area": "Kota Warisan",
-        "lat": 2.83150, "lng": 101.70050, "hours": "Daily · 8am–6pm", "phone": "1-800-88-7472",
+        "address": "Opposite SK Kota Warisan, Kota Warisan, 43900 Sepang, Selangor",
+        "lat": 2.8300, "lng": 101.7000, "hours": "Daily · 8am–6pm", "phone": "1-800-88-7472",
         "accepted": ["Paper", "Plastic", "Metal", "Glass", "Fabric"],
-    },
-    {
-        "id": "klt-metals", "name": "KLT Metals Resources",
-        "type": "Scrap Metal Dealer", "area": "Bandar Baru Salak Tinggi / Labu Lanjut",
-        "lat": 2.80830, "lng": 101.76750, "hours": "Mon–Sat · 9am–6pm", "phone": "014-933 1007",
-        "accepted": ["Metal", "E-Waste"],
-    },
-    {
-        "id": "besi-buruk-sepang", "name": "Besi Buruk Recycling",
-        "type": "Scrap Metal Dealer", "area": "Sepang",
-        "lat": 2.69050, "lng": 101.75100, "hours": "Mon–Sat · 9am–6pm", "phone": "—",
-        "accepted": ["Metal"],
-    },
-    {
-        "id": "minyak-masak-sepang", "name": "Membeli Minyak Masak Terpakai Sepang",
-        "type": "Used Cooking Oil Collection", "area": "Desa Salak Pekerti",
-        "lat": 2.80750, "lng": 101.74450, "hours": "By appointment", "phone": "—",
-        "accepted": ["Organic"],
     },
     {
         "id": "pks-sepang-putra", "name": "Pusat Kitar Semula Sepang Putra",
         "type": "Drop-Off Recycling Centre", "area": "Pantai Sepang Putra",
-        "lat": 2.59950, "lng": 101.68650, "hours": "Daily · 8am–6pm", "phone": "1-800-88-7472",
+        "address": "Near Jalan Murai, Pantai Sepang Putra, 43950 Sepang, Selangor",
+        "lat": 2.6200, "lng": 101.7100, "hours": "Daily · 8am–6pm", "phone": "1-800-88-7472",
         "accepted": ["Paper", "Plastic", "Metal", "Glass"],
     },
     {
-        "id": "cyberjaya-kdebwm", "name": "Cyberjaya Recycling Centre (KDEBWM)",
-        "type": "Recycling Centre", "area": "Persiaran Rimba Permai, Cyberjaya",
-        "lat": 2.912286, "lng": 101.655382, "hours": "Daily · 8am–6pm", "phone": "03-8890 1764",
-        "accepted": ["Paper", "Plastic", "Metal", "Glass", "E-Waste"],
+        "id": "pks-pakmat", "name": "Pusat Kitar Semula Pakmat",
+        "type": "Drop-Off Recycling Centre", "area": "Taman Putra Perdana",
+        "address": "Jalan Putra Perdana 5g, Taman Putra Perdana, 47100 Sepang, Selangor",
+        "lat": 2.9400, "lng": 101.6100, "hours": "Daily · 9am–6pm", "phone": "—",
+        "accepted": ["Paper", "Plastic", "Metal", "Glass"],
     },
     {
-        "id": "erth-ewaste", "name": "ERTH · Electronic Recycling Through Heroes",
-        "type": "E-Waste (ERTH)", "area": "Cyberjaya",
-        "lat": 2.90980, "lng": 101.65720, "hours": "Pickup on request", "phone": "—",
-        "accepted": ["E-Waste"],
+        "id": "priyashree-metal", "name": "PRIYASHREE METAL",
+        "type": "Scrap Metal Dealer", "area": "Sungai Pelek",
+        "address": "PM 379, Lot 7093, Batu 2, Mukim Sepang, Sungai Pelek, 43950 Sepang, Selangor",
+        "lat": 2.6600, "lng": 101.7300, "hours": "Mon–Sat · 9am–6pm", "phone": "—",
+        "accepted": ["Metal", "E-Waste"],
     },
 ]
 
