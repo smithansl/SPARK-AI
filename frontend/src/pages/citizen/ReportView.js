@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Camera, MapPin, Send, CheckCircle2, Trash2, Loader2, Crosshair } from "lucide-react";
 import { toast } from "sonner";
@@ -17,8 +17,8 @@ export default function ReportView() {
   const [complaints, setComplaints] = useState([]);
 
   const token = localStorage.getItem("spark_token");
-  const load = () => api.get("/complaints").then((r) => setComplaints(r.data)).catch(() => {});
-  useEffect(() => { load(); }, []);
+  const load = useCallback(() => api.get("/complaints").then((r) => setComplaints(r.data)).catch(() => {}), []);
+  useEffect(() => { load(); }, [load]);
 
   const getLocation = () => {
     if (!navigator.geolocation) return toast.error("Geolocation not supported");

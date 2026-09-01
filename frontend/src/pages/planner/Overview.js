@@ -40,6 +40,7 @@ export default function Overview() {
     api.get("/forecast").then((r) => setForecast(r.data));
     api.get("/correlation").then((r) => setCorr(r.data));
     api.get("/facilities").then((r) => setFacilities(r.data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const hour = new Date().getHours();

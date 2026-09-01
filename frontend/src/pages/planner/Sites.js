@@ -18,6 +18,7 @@ export default function Sites() {
 
   useEffect(() => {
     api.get("/sites").then((r) => { setSites(r.data); setSelected(r.data[0]); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const scoreColor = (s) => (s >= 80 ? "#10b981" : s >= 65 ? "#eab308" : "#ef4444");

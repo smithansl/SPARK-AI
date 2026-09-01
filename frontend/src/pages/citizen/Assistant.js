@@ -44,22 +44,23 @@ export default function Assistant() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streaming, open]);
 
-  const requestLocation = () => {
+  const requestLocation = useCallback(() => {
     if (!navigator.geolocation) { setGeoState("denied"); return; }
     setGeoState("locating");
     navigator.geolocation.getCurrentPosition(
       (pos) => { setCoords({ lat: +pos.coords.latitude.toFixed(5), lng: +pos.coords.longitude.toFixed(5) }); setGeoState("on"); },
       () => { setCoords({ lat: 2.69, lng: 101.75 }); setGeoState("denied"); }
     );
-  };
+  }, []);
 
-  useEffect(() => { if (open && geoState === "idle") requestLocation(); }, [open]);
+  useEffect(() => { if (open && geoState === "idle") requestLocation(); }, [open, geoState, requestLocation]);
 
   const send = async (text) => {
     const q = (text ?? input).trim();
     if (!q || streaming) return;
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: q }, { role: "assistant", content: "" }]);
+    const ts = Date.now();
+    setMessages((m) => [...m, { role: "user", content: q, id: `u${ts}` }, { role: "assistant", content: "", id: `a${ts}` }]);
     setStreaming(true);
     try {
       const res = await fetch(`${API}/citizen/assistant`, {
@@ -74,10 +75,10 @@ export default function Assistant() {
         const { done, value } = await reader.read();
         if (done) break;
         acc += decoder.decode(value, { stream: true });
-        setMessages((m) => { const c = [...m]; c[c.length - 1] = { role: "assistant", content: acc }; return c; });
+        setMessages((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: acc }; return c; });
       }
     } catch {
-      setMessages((m) => { const c = [...m]; c[c.length - 1] = { role: "assistant", content: "Assistant unavailable, please retry." }; return c; });
+      setMessages((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: "Assistant unavailable, please retry." }; return c; });
     } finally {
       setStreaming(false);
     }
@@ -131,8 +132,8 @@ export default function Assistant() {
                   </div>
                 </div>
               )}
-              {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              {messages.map((m) => (
+                <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={m.role === "user"
                     ? "bg-emerald-500 text-slate-950 px-3 py-2 max-w-[85%] text-sm font-medium"
                     : "glass border border-emerald-400/20 px-3 py-2 max-w-[90%] text-sm text-slate-200 leading-relaxed"}>

@@ -14,6 +14,7 @@ export default function Logistics() {
     api.get("/routes").then((r) => setRoutes(r.data));
     api.get("/zones").then((r) => setZones(r.data));
     api.get("/facilities").then((r) => setFacilities(r.data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const shown = active ? routes.filter((r) => r.id === active) : routes;

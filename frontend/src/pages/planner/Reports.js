@@ -12,6 +12,7 @@ export default function Reports() {
     api.get("/zones").then((r) => setZones(r.data));
     api.get("/kpis").then((r) => setKpis(r.data));
     api.get("/correlation").then((r) => setCorr(r.data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const worst = [...zones].sort((a, b) => a.recovery_rate - b.recovery_rate)[0];

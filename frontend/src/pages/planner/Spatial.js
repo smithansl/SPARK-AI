@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Layers, Plus, Trash2, Eye, EyeOff, Download, Image as ImageIcon, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ export default function Spatial() {
   const [exportingImg, setExportingImg] = useState(false);
   const mapRef = useRef(null);
 
-  const initState = (list) => {
+  const initState = useCallback((list) => {
     setLayerState((prev) => {
       const next = { ...prev };
       list.forEach((l, i) => {
@@ -23,12 +23,14 @@ export default function Spatial() {
       });
       return next;
     });
-  };
+  }, []);
 
-  const loadLayers = () =>
-    api.get("/geo/layers").then((r) => { setLayers(r.data); initState(r.data); });
+  const loadLayers = useCallback(
+    () => api.get("/geo/layers").then((r) => { setLayers(r.data); initState(r.data); }),
+    [initState]
+  );
 
-  useEffect(() => { loadLayers(); }, []);
+  useEffect(() => { loadLayers(); }, [loadLayers]);
 
   useEffect(() => {
     const active = Object.entries(layerState).filter(([, s]) => s.visible).map(([id]) => id);

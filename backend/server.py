@@ -730,58 +730,62 @@ async def startup():
     await _seed_geo_layers()
 
 
+def _waste_layer_config() -> dict:
+    return {
+        "id": "builtin-waste-recy",
+        "name": "Annual Recyclable Waste",
+        "description": "recy_annual_t (tonnes/year) · graduated 5-class",
+        "source": "builtin", "url": "/geo/pop_waste.geojson", "storage_path": None,
+        "builtin": True, "is_deleted": False, "feature_count": 344,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "style": {
+            "mode": "graduated", "attribute": "recy_annual_t",
+            "opacity": 0.65, "stroke": "#0b1220", "strokeWidth": 0.6,
+            "labelAttr": "nama",
+            "classes": [
+                {"label": "Very Low · 0–19.16", "min": 0, "max": 19.16, "color": "#1a9850"},
+                {"label": "Low · 19.16–30.47", "min": 19.16, "max": 30.47, "color": "#a6d96a"},
+                {"label": "Moderate · 30.47–47.22", "min": 30.47, "max": 47.22, "color": "#fee08b"},
+                {"label": "High · 47.22–83.02", "min": 47.22, "max": 83.02, "color": "#fc8d59"},
+                {"label": "Critical · 83.02–194.62", "min": 83.02, "max": 194.62, "color": "#d73027"},
+            ],
+        },
+    }
+
+
+def _landuse_layer_config() -> dict:
+    return {
+        "id": "builtin-landuse",
+        "name": "Current Land Use (Guna Tanah)",
+        "description": "gtn1 land-use category · categorized",
+        "source": "builtin", "url": "/geo/landuse_min.geojson", "storage_path": None,
+        "builtin": True, "is_deleted": False, "feature_count": 12,
+        "created_at": "2026-01-02T00:00:00+00:00",
+        "style": {
+            "mode": "categorized", "attribute": "gtn1",
+            "opacity": 0.6, "stroke": "#334155", "strokeWidth": 0.8,
+            "labelAttr": "gtn1",
+            "categories": [
+                {"value": "Tanah Lapang dan Rekreasi", "color": "#8EEA00"},
+                {"value": "Tanah Kosong", "color": "#808000"},
+                {"value": "Perumahan", "color": "#F4A582"},
+                {"value": "Pertanian", "color": "#A6D785"},
+                {"value": "Pengangkutan", "color": "#FFF200"},
+                {"value": "Pantai", "color": "#A9DFF0"},
+                {"value": "Komersial", "color": "#2878E8"},
+                {"value": "Institusi dan Kemudahan Masyarakat", "color": "#F08080"},
+                {"value": "Infrastruktur dan Utiliti", "color": "#FFFFFF", "outline": "#e11d48"},
+                {"value": "Industri", "color": "#A875C8"},
+                {"value": "Hutan", "color": "#168B2C"},
+                {"value": "Badan Air", "color": "#12D9E5"},
+            ],
+        },
+    }
+
+
 async def _seed_geo_layers():
-    builtins = [
-        {
-            "id": "builtin-waste-recy",
-            "name": "Annual Recyclable Waste",
-            "description": "recy_annual_t (tonnes/year) · graduated 5-class",
-            "source": "builtin", "url": "/geo/pop_waste.geojson", "storage_path": None,
-            "builtin": True, "is_deleted": False, "feature_count": 344,
-            "created_at": "2026-01-01T00:00:00+00:00",
-            "style": {
-                "mode": "graduated", "attribute": "recy_annual_t",
-                "opacity": 0.65, "stroke": "#0b1220", "strokeWidth": 0.6,
-                "labelAttr": "nama",
-                "classes": [
-                    {"label": "Very Low · 0–19.16", "min": 0, "max": 19.16, "color": "#1a9850"},
-                    {"label": "Low · 19.16–30.47", "min": 19.16, "max": 30.47, "color": "#a6d96a"},
-                    {"label": "Moderate · 30.47–47.22", "min": 30.47, "max": 47.22, "color": "#fee08b"},
-                    {"label": "High · 47.22–83.02", "min": 47.22, "max": 83.02, "color": "#fc8d59"},
-                    {"label": "Critical · 83.02–194.62", "min": 83.02, "max": 194.62, "color": "#d73027"},
-                ],
-            },
-        },
-        {
-            "id": "builtin-landuse",
-            "name": "Current Land Use (Guna Tanah)",
-            "description": "gtn1 land-use category · categorized",
-            "source": "builtin", "url": "/geo/landuse_min.geojson", "storage_path": None,
-            "builtin": True, "is_deleted": False, "feature_count": 12,
-            "created_at": "2026-01-02T00:00:00+00:00",
-            "style": {
-                "mode": "categorized", "attribute": "gtn1",
-                "opacity": 0.6, "stroke": "#334155", "strokeWidth": 0.8,
-                "labelAttr": "gtn1",
-                "categories": [
-                    {"value": "Tanah Lapang dan Rekreasi", "color": "#8EEA00"},
-                    {"value": "Tanah Kosong", "color": "#808000"},
-                    {"value": "Perumahan", "color": "#F4A582"},
-                    {"value": "Pertanian", "color": "#A6D785"},
-                    {"value": "Pengangkutan", "color": "#FFF200"},
-                    {"value": "Pantai", "color": "#A9DFF0"},
-                    {"value": "Komersial", "color": "#2878E8"},
-                    {"value": "Institusi dan Kemudahan Masyarakat", "color": "#F08080"},
-                    {"value": "Infrastruktur dan Utiliti", "color": "#FFFFFF", "outline": "#e11d48"},
-                    {"value": "Industri", "color": "#A875C8"},
-                    {"value": "Hutan", "color": "#168B2C"},
-                    {"value": "Badan Air", "color": "#12D9E5"},
-                ],
-            },
-        },
-    ]
-    for b in builtins:
-        await db.geo_layers.update_one({"id": b["id"]}, {"$set": b}, upsert=True)
+    for cfg in (_waste_layer_config(), _landuse_layer_config()):
+        await db.geo_layers.update_one({"id": cfg["id"]}, {"$set": cfg}, upsert=True)
 
 
 @app.on_event("shutdown")
